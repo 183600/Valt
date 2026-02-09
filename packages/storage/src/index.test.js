@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { IStorage, ITransaction, createStorage } from './index.js';
+import { IStorage, ITransaction, createStorage, MemoryStorage, MemoryTransaction } from './index.js';
 
 describe('IStorage Interface', () => {
   let storage;
@@ -233,5 +233,201 @@ describe('IStorage Interface', () => {
 describe('createStorage', () => {
   it('should throw error for unimplemented storage type', () => {
     expect(() => createStorage('unknown')).toThrow('Storage type \'unknown\' is not implemented yet');
+  });
+  
+  it('should create memory storage', () => {
+    const storage = createStorage('memory');
+    expect(storage).toBeInstanceOf(MemoryStorage);
+  });
+});
+
+describe('MemoryStorage', () => {
+  let storage;
+  
+  beforeEach(async () => {
+    storage = new MemoryStorage();
+    await storage.open();
+  });
+  
+  afterEach(async () => {
+    if (storage) {
+      await storage.close();
+    }
+  });
+  
+  it('should open and close storage', async () => {
+    const newStorage = new MemoryStorage();
+    expect(newStorage.isOpen).toBe(false);
+    
+    await newStorage.open();
+    expect(newStorage.isOpen).toBe(true);
+    
+    await newStorage.close();
+    expect(newStorage.isOpen).toBe(false);
+  });
+  
+  it('should store and retrieve values', async () => {
+    await storage.put('key1', 'value1');
+    const value = await storage.get('key1');
+    expect(value).toBe('value1');
+    
+    const nonExistent = await storage.get('nonexistent');
+    expect(nonExistent).toBe(null);
+  });
+  
+  it('should delete values', async () => {
+    await storage.put('key1', 'value1');
+    const exists = await storage.get('key1');
+    expect(exists).toBe('value1');
+    
+    const deleted = await storage.del('key1');
+    expect(deleted).toBe(true);
+    
+    const notFound = await storage.get('key1');
+    expect(notFound).toBe(null);
+    
+    const notDeleted = await storage.del('nonexistent');
+    expect(notDeleted).toBe(false);
+  });
+  
+  it('should scan keys with prefix', async () => {
+    await storage.put('user:1', { name: 'Alice' });
+    await storage.put('user:2', { name: 'Bob' });
+    await storage.put('post:1', { title: 'Hello' });
+    
+    const users = await storage.scan({ prefix: 'user:' });
+    expect(users).toHaveLength(2);
+    
+    const posts = await storage.scan({ prefix: 'post:' });
+    expect(posts).toHaveLength(1);
+    
+    const limited = await storage.scan({ prefix: 'user:', limit: 1 });
+    expect(limited).toHaveLength(1);
+  });
+  
+  it('should throw error when operating on closed storage', async () => {
+    await storage.close();
+    
+    await expect(storage.get('key')).rejects.toThrow('Storage is not open');
+    await expect(storage.put('key', 'value')).rejects.toThrow('Storage is not open');
+    await expect(storage.del('key')).rejects.toThrow('Storage is not open');
+    await expect(storage.scan()).rejects.toThrow('Storage is not open');
+    await expect(storage.tx()).rejects.toThrow('Storage is not open');
+  });
+});
+
+describe('MemoryTransaction', () => {
+  let storage;
+  
+  beforeEach(async () => {
+    storage = new MemoryStorage();
+    await storage.open();
+  });
+  
+  afterEach(async () => {
+    if (storage) {
+      await storage.close();
+    }
+  });
+  
+  it('should handle transaction commit', async () => {
+    await storage.put('key1', 'original1');
+    
+    const tx = await storage.tx();
+    await tx.put('key1', 'modified1');
+    await tx.put('key2', 'new2');
+    await tx.del('key1');
+    await tx.commit();
+    
+    const value1 = await storage.get('key1');
+    expect(value1).toBe(null);
+    
+    const value2 = await storage.get('key2');
+    expect(value2).toBe('new2');
+  });
+  
+  it('should handle transaction rollback', async () => {
+    await storage.put('key1', 'original1');
+    
+    const tx = await storage.tx();
+    await tx.put('key1', 'modified1');
+    await tx.put('key2', 'new2');
+    await tx.rollback();
+    
+    const value1 = await storage.get('key1');
+    expect(value1).toBe('original1');
+    
+    const value2 = await storage.get('key2');
+    expect(value2).toBe(null);
+  });
+  
+  it('should handle read operations in transaction', async () => {
+    await storage.put('key1', 'original1');
+    
+    const tx = await storage.tx();
+    
+    // 读取原始值
+    let value = await tx.get('key1');
+    expect(value).toBe('original1');
+    
+    // 修改值
+    await tx.put('key1', 'modified1');
+    
+    // 读取修改后的值
+    value = await tx.get('key1');
+    expect(value).toBe('modified1');
+    
+    // 原始存储中的值应该还未改变
+    value = await storage.get('key1');
+    expect(value).toBe('original1');
+    
+    await tx.commit();
+    
+    // 提交后，原始存储中的值应该已改变
+    value = await storage.get('key1');
+    expect(value).toBe('modified1');
+  });
+  
+  it('should handle delete in transaction', async () => {
+    await storage.put('key1', 'value1');
+    
+    const tx = await storage.tx();
+    await tx.del('key1');
+    
+    // 事务内已删除
+    let value = await tx.get('key1');
+    expect(value).toBe(null);
+    
+    // 原始存储中还存在
+    value = await storage.get('key1');
+    expect(value).toBe('value1');
+    
+    await tx.commit();
+    
+    // 提交后已删除
+    value = await storage.get('key1');
+    expect(value).toBe(null);
+  });
+  
+  it('should throw error when using committed transaction', async () => {
+    const tx = await storage.tx();
+    await tx.commit();
+    
+    await expect(tx.get('key')).rejects.toThrow('Transaction has already been committed');
+    await expect(tx.put('key', 'value')).rejects.toThrow('Transaction has already been committed');
+    await expect(tx.del('key')).rejects.toThrow('Transaction has already been committed');
+    await expect(tx.commit()).rejects.toThrow('Transaction has already been committed');
+    await expect(tx.rollback()).rejects.toThrow('Transaction has already been committed');
+  });
+  
+  it('should throw error when using rolled back transaction', async () => {
+    const tx = await storage.tx();
+    await tx.rollback();
+    
+    await expect(tx.get('key')).rejects.toThrow('Transaction has already been rolled back');
+    await expect(tx.put('key', 'value')).rejects.toThrow('Transaction has already been rolled back');
+    await expect(tx.del('key')).rejects.toThrow('Transaction has already been rolled back');
+    await expect(tx.commit()).rejects.toThrow('Transaction has already been rolled back');
+    await expect(tx.rollback()).rejects.toThrow('Transaction has already been rolled back');
   });
 });

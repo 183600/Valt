@@ -124,13 +124,143 @@ export class ITransaction {
 }
 
 /**
+ * 内存事务实现
+ */
+export class MemoryTransaction extends ITransaction {
+  constructor(storage) {
+    super();
+    this.storage = storage;
+    this.changes = new Map();
+    this.isCommitted = false;
+    this.isRolledBack = false;
+  }
+
+  async get(key) {
+    this._checkState();
+    
+    // 先检查事务中的更改
+    if (this.changes.has(key)) {
+      const value = this.changes.get(key);
+      return value === undefined ? null : value;
+    }
+    
+    // 否则从存储中获取
+    return this.storage.data.get(key) || null;
+  }
+
+  async put(key, value) {
+    this._checkState();
+    this.changes.set(key, value);
+  }
+
+  async del(key) {
+    this._checkState();
+    this.changes.set(key, undefined);
+  }
+
+  async commit() {
+    this._checkState();
+    
+    // 应用所有更改到存储
+    for (const [key, value] of this.changes.entries()) {
+      if (value === undefined) {
+        this.storage.data.delete(key);
+      } else {
+        this.storage.data.set(key, value);
+      }
+    }
+    
+    this.isCommitted = true;
+  }
+
+  async rollback() {
+    this._checkState();
+    this.isRolledBack = true;
+  }
+
+  _checkState() {
+    if (this.isCommitted) {
+      throw new Error('Transaction has already been committed');
+    }
+    if (this.isRolledBack) {
+      throw new Error('Transaction has already been rolled back');
+    }
+  }
+}
+
+/**
+ * 内存存储适配器实现
+ */
+export class MemoryStorage extends IStorage {
+  constructor() {
+    super();
+    this.data = new Map();
+    this.isOpen = false;
+  }
+
+  async open(options = {}) {
+    this.isOpen = true;
+  }
+
+  async close() {
+    this.isOpen = false;
+  }
+
+  async get(key) {
+    this._checkOpen();
+    return this.data.get(key) || null;
+  }
+
+  async put(key, value) {
+    this._checkOpen();
+    this.data.set(key, value);
+  }
+
+  async del(key) {
+    this._checkOpen();
+    return this.data.delete(key);
+  }
+
+  async scan(options = {}) {
+    this._checkOpen();
+    const { prefix = '', limit } = options;
+    const results = [];
+    
+    for (const [key, value] of this.data.entries()) {
+      if (key.startsWith(prefix)) {
+        results.push({ key, value });
+        if (limit && results.length >= limit) {
+          break;
+        }
+      }
+    }
+    
+    return results;
+  }
+
+  async tx() {
+    this._checkOpen();
+    return new MemoryTransaction(this);
+  }
+
+  _checkOpen() {
+    if (!this.isOpen) {
+      throw new Error('Storage is not open');
+    }
+  }
+}
+
+/**
  * 存储工厂函数
  * @param {string} type - 存储类型
  * @param {Object} options - 配置选项
  * @returns {IStorage} 存储实例
  */
 export function createStorage(type, options = {}) {
-  // 这里将通过 ctx.get('xxx') 调用其他库的能力
-  // 目前只定义接口，具体实现在后续任务中
-  throw new Error(`Storage type '${type}' is not implemented yet`);
+  switch (type) {
+    case 'memory':
+      return new MemoryStorage();
+    default:
+      throw new Error(`Storage type '${type}' is not implemented yet`);
+  }
 }
