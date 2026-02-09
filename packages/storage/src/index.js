@@ -251,6 +251,80 @@ export class MemoryStorage extends IStorage {
 }
 
 /**
+ * IndexedDB 事务实现（Stub 版本）
+ */
+export class IndexedDBTransaction extends ITransaction {
+  constructor() {
+    super();
+  }
+
+  _throwNotSupported() {
+    throw new Error('IndexedDB is not supported in this environment. This is a stub implementation.');
+  }
+
+  async get(key) {
+    this._throwNotSupported();
+  }
+
+  async put(key, value) {
+    this._throwNotSupported();
+  }
+
+  async del(key) {
+    this._throwNotSupported();
+  }
+
+  async commit() {
+    this._throwNotSupported();
+  }
+
+  async rollback() {
+    this._throwNotSupported();
+  }
+}
+
+/**
+ * IndexedDB 存储适配器实现（Stub 版本）
+ */
+export class IndexedDBStorage extends IStorage {
+  constructor() {
+    super();
+  }
+
+  _throwNotSupported() {
+    throw new Error('IndexedDB is not supported in this environment. This is a stub implementation.');
+  }
+
+  async open(options = {}) {
+    this._throwNotSupported();
+  }
+
+  async close() {
+    this._throwNotSupported();
+  }
+
+  async get(key) {
+    this._throwNotSupported();
+  }
+
+  async put(key, value) {
+    this._throwNotSupported();
+  }
+
+  async del(key) {
+    this._throwNotSupported();
+  }
+
+  async scan(options = {}) {
+    this._throwNotSupported();
+  }
+
+  async tx() {
+    this._throwNotSupported();
+  }
+}
+
+/**
  * 存储工厂函数
  * @param {string} type - 存储类型
  * @param {Object} options - 配置选项
@@ -260,6 +334,8 @@ export function createStorage(type, options = {}) {
   switch (type) {
     case 'memory':
       return new MemoryStorage();
+    case 'indexeddb':
+      return new IndexedDBStorage();
     default:
       throw new Error(`Storage type '${type}' is not implemented yet`);
   }

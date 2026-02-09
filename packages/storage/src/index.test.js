@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { IStorage, ITransaction, createStorage, MemoryStorage, MemoryTransaction } from './index.js';
+import { IStorage, ITransaction, createStorage, MemoryStorage, MemoryTransaction, IndexedDBStorage, IndexedDBTransaction } from './index.js';
 
 describe('IStorage Interface', () => {
   let storage;
@@ -238,6 +238,37 @@ describe('createStorage', () => {
   it('should create memory storage', () => {
     const storage = createStorage('memory');
     expect(storage).toBeInstanceOf(MemoryStorage);
+  });
+  
+  it('should create indexeddb storage', () => {
+    const storage = createStorage('indexeddb');
+    expect(storage).toBeInstanceOf(IndexedDBStorage);
+  });
+});
+
+describe('IndexedDBStorage', () => {
+  it('should throw error for all operations (stub implementation)', () => {
+    const storage = new IndexedDBStorage();
+    
+    expect(storage.open()).rejects.toThrow('IndexedDB is not supported in this environment. This is a stub implementation.');
+    expect(storage.close()).rejects.toThrow('IndexedDB is not supported in this environment. This is a stub implementation.');
+    expect(storage.get('key')).rejects.toThrow('IndexedDB is not supported in this environment. This is a stub implementation.');
+    expect(storage.put('key', 'value')).rejects.toThrow('IndexedDB is not supported in this environment. This is a stub implementation.');
+    expect(storage.del('key')).rejects.toThrow('IndexedDB is not supported in this environment. This is a stub implementation.');
+    expect(storage.scan()).rejects.toThrow('IndexedDB is not supported in this environment. This is a stub implementation.');
+    expect(storage.tx()).rejects.toThrow('IndexedDB is not supported in this environment. This is a stub implementation.');
+  });
+});
+
+describe('IndexedDBTransaction', () => {
+  it('should throw error for all operations (stub implementation)', () => {
+    const tx = new IndexedDBTransaction();
+    
+    expect(tx.get('key')).rejects.toThrow('IndexedDB is not supported in this environment. This is a stub implementation.');
+    expect(tx.put('key', 'value')).rejects.toThrow('IndexedDB is not supported in this environment. This is a stub implementation.');
+    expect(tx.del('key')).rejects.toThrow('IndexedDB is not supported in this environment. This is a stub implementation.');
+    expect(tx.commit()).rejects.toThrow('IndexedDB is not supported in this environment. This is a stub implementation.');
+    expect(tx.rollback()).rejects.toThrow('IndexedDB is not supported in this environment. This is a stub implementation.');
   });
 });
 
