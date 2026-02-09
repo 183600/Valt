@@ -77,6 +77,116 @@ export class SyncConnection {
     }
     return 'disconnected';
   }
+  
+  /**
+   * Push local changes to remote server
+   */
+  async push(): Promise<void> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to sync server');
+    }
+    
+    try {
+      // Get storage module through context
+      const storage = this.ctx.get<any>('storage');
+      if (!storage) {
+        throw new Error('Storage module not available');
+      }
+      
+      // Get security module through context
+      const security = this.ctx.get<any>('security');
+      if (!security) {
+        throw new Error('Security module not available');
+      }
+      
+      // Get local data
+      const localData = await storage.getData();
+      
+      // Apply security transformations
+      const securedData = await security.secureData(localData);
+      
+      // TODO: Implement actual push to remote server
+      console.log('Pushing data to remote server:', securedData);
+      
+    } catch (error) {
+      console.error('Failed to push data:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Pull changes from remote server
+   */
+  async pull(): Promise<void> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to sync server');
+    }
+    
+    try {
+      // Get storage module through context
+      const storage = this.ctx.get<any>('storage');
+      if (!storage) {
+        throw new Error('Storage module not available');
+      }
+      
+      // Get security module through context
+      const security = this.ctx.get<any>('security');
+      if (!security) {
+        throw new Error('Security module not available');
+      }
+      
+      // TODO: Implement actual pull from remote server
+      console.log('Pulling data from remote server');
+      
+      // Mock remote data for now
+      const remoteData = { mock: 'remote-data', timestamp: Date.now() };
+      
+      // Apply security transformations
+      const securedData = await security.unsecureData(remoteData);
+      
+      // Store data locally
+      await storage.setData(securedData);
+      
+    } catch (error) {
+      console.error('Failed to pull data:', error);
+      throw error;
+    }
+  }
+  
+  /**
+   * Apply remote changes to local storage
+   */
+  async applyRemote(remoteData: any): Promise<void> {
+    if (!this.isConnected) {
+      throw new Error('Not connected to sync server');
+    }
+    
+    try {
+      // Get storage module through context
+      const storage = this.ctx.get<any>('storage');
+      if (!storage) {
+        throw new Error('Storage module not available');
+      }
+      
+      // Get security module through context
+      const security = this.ctx.get<any>('security');
+      if (!security) {
+        throw new Error('Security module not available');
+      }
+      
+      // Apply security transformations
+      const securedData = await security.unsecureData(remoteData);
+      
+      // Store data locally
+      await storage.setData(securedData);
+      
+      console.log('Applied remote data to local storage');
+      
+    } catch (error) {
+      console.error('Failed to apply remote data:', error);
+      throw error;
+    }
+  }
 }
 
 /**
