@@ -90,6 +90,46 @@ class SecurityContext {
 
     return true;
   }
+
+  /**
+   * Encrypt data using the security context
+   * @param {string|Object} data - The data to encrypt
+   * @param {Object} options - Encryption options (optional)
+   * @returns {string} - The encrypted data
+   */
+  encrypt(data, options = {}) {
+    // TODO: Implement actual encryption logic
+    // This is a stub implementation that returns a base64 encoded string
+    const dataStr = typeof data === 'string' ? data : JSON.stringify(data);
+    return Buffer.from(dataStr).toString('base64');
+  }
+
+  /**
+   * Decrypt data using the security context
+   * @param {string} encryptedData - The encrypted data
+   * @param {Object} options - Decryption options (optional)
+   * @returns {string|Object} - The decrypted data
+   */
+  decrypt(encryptedData, options = {}) {
+    // TODO: Implement actual decryption logic
+    // This is a stub implementation that decodes base64 string
+    try {
+      // Check if the input is a valid base64 string
+      if (!/^[A-Za-z0-9+/]*={0,2}$/.test(encryptedData)) {
+        throw new Error('Invalid base64 format');
+      }
+      
+      const decoded = Buffer.from(encryptedData, 'base64').toString('utf8');
+      // Try to parse as JSON, if fails return as string
+      try {
+        return JSON.parse(decoded);
+      } catch {
+        return decoded;
+      }
+    } catch (error) {
+      throw new Error('Failed to decrypt data');
+    }
+  }
 }
 
 /**

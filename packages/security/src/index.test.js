@@ -110,4 +110,39 @@ describe('SecurityContext', () => {
     expect(security.can('read', { type: 'document', visibility: 'public' })).toBe(true);
     expect(security.can('delete', { type: 'document' })).toBe(false);
   });
+
+  describe('encrypt/decrypt', () => {
+    it('should encrypt and decrypt string data', () => {
+      const ctx = {};
+      const security = createSecurityContext(ctx);
+      
+      const originalData = 'Hello, World!';
+      const encrypted = security.encrypt(originalData);
+      const decrypted = security.decrypt(encrypted);
+      
+      expect(encrypted).not.toBe(originalData);
+      expect(decrypted).toBe(originalData);
+    });
+
+    it('should encrypt and decrypt object data', () => {
+      const ctx = {};
+      const security = createSecurityContext(ctx);
+      
+      const originalData = { message: 'Hello', id: 123 };
+      const encrypted = security.encrypt(originalData);
+      const decrypted = security.decrypt(encrypted);
+      
+      expect(encrypted).not.toBe(JSON.stringify(originalData));
+      expect(decrypted).toEqual(originalData);
+    });
+
+    it('should handle decrypt errors', () => {
+      const ctx = {};
+      const security = createSecurityContext(ctx);
+      
+      expect(() => {
+        security.decrypt('invalid-base64!');
+      }).toThrow('Failed to decrypt data');
+    });
+  });
 });
